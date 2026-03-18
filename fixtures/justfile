@@ -1,0 +1,5 @@
+manifesto:
+    wget https://raw.githubusercontent.com/IIIF-Commons/manifesto/master/test/fixtures/pres3.json
+
+validator:
+    wget https://raw.githubusercontent.com/IIIF/presentation-validator/main/fixtures/3/full_example.json
