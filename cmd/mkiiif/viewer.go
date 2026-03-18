@@ -39,6 +39,11 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
             manifest-id="{{ .ManifestID }}"
             canvas-id=""
             config='{
+              "openSeadragonConfig": {
+                "maxZoomPixelRatio": 4,
+                "zoomPerScroll": 1.5,
+                "animationTime": 1 
+              },
               "showToggle": true,
               "toolbarOpen": false,
               "showCanvasNav": true,
