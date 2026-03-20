@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if *id == "" || *base == "" || *title == "" || *source == "" || *destination == "" {
-		fmt.Fprintln(os.Stderr, "Usage: iiif-builder -id <id> -base <url> -title <title> -source <dir|pdf> -destination <dir> [-tiles]")
+		fmt.Fprintln(os.Stderr, "Usage: mkiiif -id <id> -base <url> -title <title> -source <dir|pdf> -destination <dir> [-tiles]")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
