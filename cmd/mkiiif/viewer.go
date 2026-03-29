@@ -38,6 +38,7 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
         <triiiceratops-viewer
             manifest-id="{{ .ManifestID }}"
             canvas-id=""
+            theme="light"
             config='{
               "openSeadragonConfig": {
                 "maxZoomPixelRatio": 4,
