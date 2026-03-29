@@ -113,17 +113,22 @@ func main() {
 			// so pass only the parent URL (base/id); vips will produce base/id/name in info.json
 			vipsBaseURL := fmt.Sprintf("%s/%s", *base, sanitizedID)
 
-			width, height, err := tileImage(img.Path, tileDir, vipsBaseURL)
+			width, height, thumbW, thumbH, err := tileImage(img.Path, tileDir, vipsBaseURL)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error tiling %s: %v\n", img.Path, err)
 				os.Exit(1)
 			}
 
-			bodyURL := serviceURL + "/full/max/0/default.jpg"
-			if err := manifest.NewItem(canvasID, name, bodyURL, []int{width, height}, serviceURL); err != nil {
+			bodyURL := fmt.Sprintf("%s/full/%d,%d/0/default.jpg", serviceURL, width, height)
+			if err := manifest.NewItem(canvasID, name, bodyURL, []int{width, height}, serviceURL, []int{thumbW, thumbH}); err != nil {
 				fmt.Fprintf(os.Stderr, "Error adding canvas for %s: %v\n", img.Path, err)
 				os.Exit(1)
 			}
+
+			if len(manifest.Thumbnail) == 0 {
+				manifest.Thumbnail = manifest.Items[len(manifest.Items)-1].Thumbnail
+			}
+
 			fmt.Fprintf(os.Stderr, "Tiled %s -> %s\n", filepath.Base(img.Path), tileDir)
 
 			if err := os.Remove(img.Path); err != nil {
@@ -134,7 +139,7 @@ func main() {
 			_ = os.Remove(filepath.Join(outDir, "vips-properties.xml"))
 		} else {
 			bodyURL := fmt.Sprintf("%s/%s/%s", *base, sanitizedID, filepath.Base(img.Path))
-			if err := manifest.NewItem(canvasID, name, bodyURL, []int{img.Width, img.Height}, ""); err != nil {
+			if err := manifest.NewItem(canvasID, name, bodyURL, []int{img.Width, img.Height}, "", nil); err != nil {
 				fmt.Fprintf(os.Stderr, "Error adding canvas for %s: %v\n", img.Path, err)
 				os.Exit(1)
 			}
@@ -148,7 +153,8 @@ func main() {
 	}
 	fmt.Fprintf(os.Stderr, "Manifest written to %s\n", manifestPath)
 
-	indexHTML, err := renderViewer("manifest.json")
+	manifestURL := fmt.Sprintf("%s/%s/manifest.json", *base, sanitizedID)
+	indexHTML, err := renderViewer(manifestURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error rendering viewer: %v\n", err)
 		os.Exit(1)
@@ -162,45 +168,50 @@ func main() {
 }
 
 // tileImage runs vips dzsave on imagePath, writes IIIF tiles into tileDir,
-// generates full/max/0/default.jpg (not produced automatically by vips),
-// and returns the image dimensions read from the generated info.json.
-func tileImage(imagePath, tileDir, serviceURL string) (int, int, error) {
+// and returns the image dimensions and thumbnail dimensions read from the generated info.json.
+// vips dzsave generates full/<thumbW>,<thumbH>/0/default.jpg at the lowest zoom level
+// (original dimensions divided by the largest scale factor).
+func tileImage(imagePath, tileDir, serviceURL string) (width, height, thumbW, thumbH int, err error) {
 	cmd := exec.Command("vips", "dzsave", imagePath, tileDir, "--id", serviceURL, "--layout", "iiif3")
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return 0, 0, err
-	}
-
-	// vips dzsave does not generate full/max/0/default.jpg; create it from the original
-	fullDir := filepath.Join(tileDir, "full", "max", "0")
-	if err := os.MkdirAll(fullDir, 0755); err != nil {
-		return 0, 0, fmt.Errorf("creating full image dir: %w", err)
-	}
-	fullCmd := exec.Command("vips", "copy", imagePath, filepath.Join(fullDir, "default.jpg"))
-	fullCmd.Stderr = os.Stderr
-	if err := fullCmd.Run(); err != nil {
-		return 0, 0, fmt.Errorf("generating full image: %w", err)
+		return 0, 0, 0, 0, err
 	}
 
 	infoPath := filepath.Join(tileDir, "info.json")
 	data, err := os.ReadFile(infoPath)
 	if err != nil {
-		return 0, 0, fmt.Errorf("reading info.json: %w", err)
+		return 0, 0, 0, 0, fmt.Errorf("reading info.json: %w", err)
 	}
 
 	var info struct {
 		Width  int `json:"width"`
 		Height int `json:"height"`
+		Tiles  []struct {
+			ScaleFactors []int `json:"scaleFactors"`
+		} `json:"tiles"`
 	}
 	if err := json.Unmarshal(data, &info); err != nil {
-		return 0, 0, fmt.Errorf("parsing info.json: %w", err)
+		return 0, 0, 0, 0, fmt.Errorf("parsing info.json: %w", err)
 	}
 	if info.Width == 0 || info.Height == 0 {
-		return 0, 0, fmt.Errorf("info.json has zero dimensions")
+		return 0, 0, 0, 0, fmt.Errorf("info.json has zero dimensions")
 	}
 
-	return info.Width, info.Height, nil
+	maxScale := 1
+	if len(info.Tiles) > 0 {
+		for _, sf := range info.Tiles[0].ScaleFactors {
+			if sf > maxScale {
+				maxScale = sf
+			}
+		}
+	}
+
+	tw := (info.Width + maxScale - 1) / maxScale
+	th := (info.Height + maxScale - 1) / maxScale
+
+	return info.Width, info.Height, tw, th, nil
 }
 
 // sanitizeID replaces any character that is not a letter, digit, hyphen, or dot with _.

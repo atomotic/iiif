@@ -41,7 +41,7 @@ func (m *Manifest) Serialize() string {
 // NewItem adds a canvas to the manifest.
 // If imageservice is provided and size is empty, dimensions are fetched from the image service via HTTP.
 // If both imageservice and size are provided, the given size is used and no HTTP request is made.
-func (m *Manifest) NewItem(canvasid string, label string, body string, size []int, imageservice string) error {
+func (m *Manifest) NewItem(canvasid string, label string, body string, size []int, imageservice string, thumb []int) error {
 	var err error
 	if imageservice != "" && len(size) == 0 {
 		size, err = imageapi.GetSize(imageservice)
@@ -50,12 +50,24 @@ func (m *Manifest) NewItem(canvasid string, label string, body string, size []in
 		}
 	}
 
+	var thumbURL string
+	if imageservice != "" && len(thumb) == 2 {
+		thumbURL = fmt.Sprintf("%s/full/%d,%d/0/default.jpg", imageservice, thumb[0], thumb[1])
+	} else {
+		thumbURL = body
+	}
+
 	c := Canvas{
-		ID:     fmt.Sprintf("%s/canvas/%s", m.ID, canvasid),
-		Type:   "Canvas",
-		Width:  size[0],
+		ID:    fmt.Sprintf("%s/canvas/%s", m.ID, canvasid),
+		Type:  "Canvas",
+		Width: size[0],
 		Height: size[1],
-		Label:  Label{"none": {label}},
+		Label: Label{"none": {label}},
+		Thumbnail: []Thumbnail{{
+			ID:     thumbURL,
+			Type:   "Image",
+			Format: "image/jpeg",
+		}},
 	}
 
 	ap := AnnotationPage{

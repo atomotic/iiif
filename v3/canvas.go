@@ -6,6 +6,7 @@ type Canvas struct {
 	Label       Label            `json:"label,omitempty"`
 	Height      int              `json:"height,omitempty"`
 	Width       int              `json:"width,omitempty"`
+	Thumbnail   []Thumbnail      `json:"thumbnail,omitempty"`
 	Items       []AnnotationPage `json:"items,omitempty"`
 	Annotations []AnnotationPage `json:"annotations,omitempty"`
 }
