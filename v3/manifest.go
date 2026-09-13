@@ -52,7 +52,7 @@ func (m *Manifest) NewItem(canvasid string, label string, body string, size []in
 
 	var thumbURL string
 	if imageservice != "" && len(thumb) == 2 {
-		thumbURL = fmt.Sprintf("%s/full/%d,%d/0/default.jpg", imageservice, thumb[0], thumb[1])
+		thumbURL = fmt.Sprintf("%s/0,0,%d,%d/%d,%d/0/default.jpg", imageservice, size[0], size[1], thumb[0], thumb[1])
 	} else {
 		thumbURL = body
 	}

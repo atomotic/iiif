@@ -167,10 +167,8 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Viewer written to %s\n", indexPath)
 }
 
-// tileImage runs vips dzsave on imagePath, writes IIIF tiles into tileDir,
-// and returns the image dimensions and thumbnail dimensions read from the generated info.json.
-// vips dzsave generates full/<thumbW>,<thumbH>/0/default.jpg at the lowest zoom level
-// (original dimensions divided by the largest scale factor).
+// tileImage makes IIIF tiles for imagePath with vips dzsave, saves them in
+// tileDir, and returns the full image size and the thumbnail size.
 func tileImage(imagePath, tileDir, serviceURL string) (width, height, thumbW, thumbH int, err error) {
 	cmd := exec.Command("vips", "dzsave", imagePath, tileDir, "--id", serviceURL, "--layout", "iiif3")
 	cmd.Stdout = os.Stderr
@@ -188,9 +186,6 @@ func tileImage(imagePath, tileDir, serviceURL string) (width, height, thumbW, th
 	var info struct {
 		Width  int `json:"width"`
 		Height int `json:"height"`
-		Tiles  []struct {
-			ScaleFactors []int `json:"scaleFactors"`
-		} `json:"tiles"`
 	}
 	if err := json.Unmarshal(data, &info); err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("parsing info.json: %w", err)
@@ -199,19 +194,18 @@ func tileImage(imagePath, tileDir, serviceURL string) (width, height, thumbW, th
 		return 0, 0, 0, 0, fmt.Errorf("info.json has zero dimensions")
 	}
 
-	maxScale := 1
-	if len(info.Tiles) > 0 {
-		for _, sf := range info.Tiles[0].ScaleFactors {
-			if sf > maxScale {
-				maxScale = sf
-			}
-		}
+	// vips saves a small copy of the whole image to disk but does not list it
+	// in info.json. Read its size from the files on disk.
+	wholeRegion := fmt.Sprintf("0,0,%d,%d", info.Width, info.Height)
+	sizes, err := filepath.Glob(filepath.Join(tileDir, wholeRegion, "*"))
+	if err != nil || len(sizes) == 0 {
+		return 0, 0, 0, 0, fmt.Errorf("no whole-image rendition under %s", wholeRegion)
+	}
+	if _, err := fmt.Sscanf(filepath.Base(sizes[0]), "%d,%d", &thumbW, &thumbH); err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("parsing thumbnail size %q: %w", filepath.Base(sizes[0]), err)
 	}
 
-	tw := (info.Width + maxScale - 1) / maxScale
-	th := (info.Height + maxScale - 1) / maxScale
-
-	return info.Width, info.Height, tw, th, nil
+	return info.Width, info.Height, thumbW, thumbH, nil
 }
 
 // sanitizeID replaces any character that is not a letter, digit, hyphen, or dot with _.
