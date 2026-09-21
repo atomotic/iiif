@@ -37,7 +37,7 @@ mkiiif -id <id> -base <url> -title <title> -source <dir|pdf> -destination <dir> 
 ## Dependencies
 
 - [`mutool`](https://mupdf.com/) — required for PDF input
-- [`vips`](https://www.libvips.org/) — required when using `-tiles`
+- [`vips`](https://www.libvips.org/) ≥ 8.17.1 — required when using `-tiles`
 
 ## Example
 
