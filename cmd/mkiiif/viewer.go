@@ -11,10 +11,6 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Triiiceratops Viewer</title>
-        <link
-            rel="stylesheet"
-            href="https://unpkg.com/triiiceratops/dist/triiiceratops-element.css"
-        />
         <style>
             * {
                 margin: 0;
@@ -28,22 +24,20 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
                 overflow: hidden;
             }
             triiiceratops-viewer {
+                display: block;
                 width: 100%;
                 height: 100%;
-                /*display: block;*/
             }
         </style>
     </head>
     <body>
         <triiiceratops-viewer
             manifest-id="{{ .ManifestID }}"
-            canvas-id=""
             theme="light"
             config='{
-              "openSeadragonConfig": {
+              "renderer": {
                 "maxZoomPixelRatio": 4,
-                "zoomPerScroll": 1.5,
-                "animationTime": 1 
+                "zoomPerWheelNotch": 1.5
               },
               "showToggle": true,
               "toolbarOpen": false,
@@ -60,10 +54,8 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
               },
               "gallery": {
                 "open": true,
-                "draggable": false,
-                "showCloseButton": false,
                 "dockPosition": "bottom",
-                "fixedHeight": 102
+                "size": 102
               },
               "search": {
                 "open": false,
@@ -71,14 +63,13 @@ var viewerTemplate = template.Must(template.New("viewer").Parse(`<!doctype html>
                 "query": ""
               },
               "annotations": {
-                "open": false,
-                "visible": false
+                "open": false
               },
               "transparentBackground": false
             }'
         >
         </triiiceratops-viewer>
-        <script src="https://unpkg.com/triiiceratops/dist/triiiceratops-element.iife.js"></script>
+        <script src="https://unpkg.com/triiiceratops@^1/dist/triiiceratops-element.iife.js"></script>
     </body>
 </html>
 `))
