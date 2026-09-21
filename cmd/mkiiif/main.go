@@ -15,19 +15,34 @@ import (
 )
 
 func main() {
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	flag.BoolVar(showVersion, "v", false, "Print version and exit")
+
 	id := flag.String("id", "", "Unique identifier for the manifest (e.g. book1)")
 	base := flag.String("base", "", "Base URL where the manifest will be served (e.g. https://example.org/iiif)")
 	title := flag.String("title", "", "Human-readable title of the manifest")
 	source := flag.String("source", "", "Path to a directory of images or a PDF file to convert")
 	destination := flag.String("destination", "", "Output directory; a subdirectory named <id> will be created inside it, containing the images and manifest.json")
-	tiles := flag.Bool("tiles", false, "Generate IIIF image tiles for each image using vips dzsave (requires vips)")
+	tiles := flag.Bool("tiles", false, "Generate IIIF image tiles for each image using vips dzsave (requires vips >= 8.17.1)")
 	resolution := flag.Int("resolution", 150, "Resolution (DPI) used when converting PDF pages to images via mutool")
 	flag.Parse()
+
+	if *showVersion {
+		printVersion()
+		os.Exit(0)
+	}
 
 	if *id == "" || *base == "" || *title == "" || *source == "" || *destination == "" {
 		fmt.Fprintln(os.Stderr, "Usage: mkiiif -id <id> -base <url> -title <title> -source <dir|pdf> -destination <dir> [-tiles]")
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+
+	if *tiles {
+		if err := checkVips(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	sanitizedID := sanitizeID(*id)
